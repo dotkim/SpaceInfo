@@ -11,6 +11,8 @@ A python3 script to output disk usage for a computer/server
 - Insert the server/computer names into servers.txt.
 - Run the SpaceInfo.py script.
 
+An Output file named DiskUsage.txt will apear in a 'Logs' folder in root.
+
 If you want to use this as an .exe file you can run the setup file via cmd.
 You are going to need the cx_freeze module to run the setup.
 Setup can be run with this command: python setup.py install
