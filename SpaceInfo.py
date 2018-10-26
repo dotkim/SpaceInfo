@@ -1,27 +1,44 @@
-import wmi, pathlib
+import wmi, pathlib, sqlite3
 pathlib.Path('.\\Logs').mkdir(parents=True, exist_ok=True)
+database = '.\\Logs\DiskLogs.db'
 
-def getServersFromFile():
+def dbConnection(database):
     try:
-        serverNameFromFile = open('.\Servers.txt', 'r')
-        serverNames = serverNameFromFile.read().splitlines()
-        return serverNames
-    except IOError:
-        print('Error when opening "Servers.txt", Check if the file exists in the root directory')
+        conn = sqlite3.connect(database)
+        return conn
+    except sqlite3.Error as err:
+        self.log.error('dberror: %s' % err)
 
-def printDiskUsageToFile():
-    serverNames = getServersFromFile()
-    printToFile = open('.\Logs\DiskUsage.txt', 'a')
-    for server in serverNames:
-        c = wmi.WMI(server)
-        for disk in c.Win32_LogicalDisk(DriveType=3):
-            printToFile.write(server + ' ' + disk.Caption + "%0.2f%% free" % (100.0 * int(disk.FreeSpace) / int(disk.Size)) + '\n') 
-    printToFile.close()
+def getServersFromDB():
+    #try:
+    conn = dbConnection(database)
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT  ServerName
+        FROM    Servers
+    """)
+    serverNames = cur.fetchall()
+    return serverNames, conn, cur
 
-printDiskUsageToFile()
+def printDiskUsageToDB():
+    serverNames, conn, cur = getServersFromDB()
+    for server in serverNames[0]:
+        connectedServer = wmi.WMI(server)
+        for disk in connectedServer.Win32_LogicalDisk(DriveType=3):
+            cur.execute("""
+                INSERT INTO DiskUsage(ServerID, Caption, FreeSpace, Size, DateCaptured)
+                VALUES ('{SER}', '{CAP}', {FRS}, {SIZ}, DATE('NOW'))
+            """\
+            .format(SER=server, CAP=disk.caption, FRS=int(disk.FreeSpace), SIZ=int(disk.Size)))
+    conn.commit()
+    conn.close()
 
-def mainApp():
-    # Sjekke servere for diskplass %
-    # Lage rapport for diskplass
-    # Evt. slette gamle rapporter?
-    # Varsle ved lav %
+class SpaceInformant():
+    def spaceWarning():
+        #Check if disk usage is at a certain level, then report it.
+        pass
+    def reportUsage():
+        print('test')
+
+if __name__ == "__main__":
+    printDiskUsageToDB()
